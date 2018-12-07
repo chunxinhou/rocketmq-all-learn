@@ -24,6 +24,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.client.producer.SendCallback;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
@@ -48,12 +49,17 @@ public class Producer {
 
             for (int i = 0; i < Integer.parseInt(msgCount); i++) {
                 try {
-                    Message msg = new Message(
+                    final Message msg = new Message(
                         topic,
                         tags,
                         keys,
                         ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET));
-                    SendResult sendResult = producer.send(msg);
+                    SendResult sendResult = producer.send(msg);/*同步*/
+                    producer.send(msg, new SendCallback() {
+                        @Override public void onSuccess(SendResult sendResult) { }
+                        @Override public void onException(Throwable e) { }
+                    });/*异步*/
+                    producer.sendOneway(msg); /*oneway*/
                     System.out.printf("%-8d %s%n", i, sendResult);
                 } catch (Exception e) {
                     e.printStackTrace();

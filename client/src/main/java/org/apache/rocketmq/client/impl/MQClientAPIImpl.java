@@ -1205,10 +1205,12 @@ public class MQClientAPIImpl {
     public TopicRouteData getTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis,
         boolean allowTopicNotExist) throws MQClientException, InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException {
         GetRouteInfoRequestHeader requestHeader = new GetRouteInfoRequestHeader();
-        requestHeader.setTopic(topic);
+        requestHeader.setTopic(topic);/*封装topic 进入requestHeader*/
 
+        /*创建远程命令 :GET_ROUTEINTO_BY_TOPIC = 105*/
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_ROUTEINTO_BY_TOPIC, requestHeader);
 
+        /*正式访问nameserver 获取数据，同步*/
         RemotingCommand response = this.remotingClient.invokeSync(null, request, timeoutMillis);
         assert response != null;
         switch (response.getCode()) {

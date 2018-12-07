@@ -82,7 +82,7 @@ import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.apache.rocketmq.remoting.netty.NettyClientConfig;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
-public class MQClientInstance {
+public class  MQClientInstance {
     private final static long LOCK_TIMEOUT_MILLIS = 3000;
     private final InternalLogger log = ClientLogger.getLog();
     private final ClientConfig clientConfig;
@@ -122,6 +122,13 @@ public class MQClientInstance {
         this(clientConfig, instanceIndex, clientId, null);
     }
 
+    /**
+     *
+     * @param clientConfig 客户端基本配置
+     * @param instanceIndex 客户端创建序号
+     * @param clientId
+     * @param rpcHook
+     */
     public MQClientInstance(ClientConfig clientConfig, int instanceIndex, String clientId, RPCHook rpcHook) {
         this.clientConfig = clientConfig;
         this.instanceIndex = instanceIndex;
@@ -222,7 +229,7 @@ public class MQClientInstance {
 
     public void start() throws MQClientException {
 
-        synchronized (this) {
+        synchronized (this) {//todo: 需要加锁吗？
             switch (this.serviceState) {
                 case CREATE_JUST:
                     this.serviceState = ServiceState.START_FAILED;
@@ -235,11 +242,11 @@ public class MQClientInstance {
                     // Start various schedule tasks
                     this.startScheduledTask();
                     // Start pull service
-                    this.pullMessageService.start();
+                    this.pullMessageService.start(); //todo: 为什么生产者也要pull 消息？
                     // Start rebalance service
-                    this.rebalanceService.start();
+                    this.rebalanceService.start();  //todo: 为什么生产者开启也要去负载均衡消费者？
                     // Start push service
-                    this.defaultMQProducer.getDefaultMQProducerImpl().start(false);
+                    this.defaultMQProducer.getDefaultMQProducerImpl().start(false); /*开启 内部group CLIENT_INNER_PRODUCER_GROUP = "CLIENT_INNER_PRODUCER"*/
                     log.info("the client factory [{}] start OK", this.clientId);
                     this.serviceState = ServiceState.RUNNING;
                     break;
@@ -925,6 +932,12 @@ public class MQClientInstance {
         }
     }
 
+    /**
+     * 客户端中map缓存 生产者
+     * @param group
+     * @param producer
+     * @return
+     */
     public boolean registerProducer(final String group, final DefaultMQProducerImpl producer) {
         if (null == group || null == producer) {
             return false;

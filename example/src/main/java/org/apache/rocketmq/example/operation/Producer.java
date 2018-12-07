@@ -42,6 +42,8 @@ public class Producer {
             DefaultMQProducer producer = new DefaultMQProducer(group);
             producer.setInstanceName(Long.toString(System.currentTimeMillis()));
 
+            producer.setNamesrvAddr("");/*设置注册中心*/
+
             producer.start();
 
             for (int i = 0; i < Integer.parseInt(msgCount); i++) {

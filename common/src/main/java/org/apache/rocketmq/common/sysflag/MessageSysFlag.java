@@ -35,4 +35,16 @@ public class MessageSysFlag {
     public static int clearCompressedFlag(final int flag) {
         return flag & (~COMPRESSED_FLAG);
     }
+
+
+    public static void main(String[] args) {
+        System.out.println("COMPRESSED_FLAG:"+COMPRESSED_FLAG);
+        System.out.println("MULTI_TAGS_FLAG:"+MULTI_TAGS_FLAG);
+        System.out.println("TRANSACTION_NOT_TYPE:"+TRANSACTION_NOT_TYPE);
+        System.out.println("TRANSACTION_PREPARED_TYPE:"+TRANSACTION_PREPARED_TYPE);
+        System.out.println("TRANSACTION_COMMIT_TYPE:"+TRANSACTION_COMMIT_TYPE);
+        System.out.println("TRANSACTION_ROLLBACK_TYPE:"+TRANSACTION_ROLLBACK_TYPE);
+        System.out.println("~TRANSACTION_ROLLBACK_TYPE:"+~TRANSACTION_ROLLBACK_TYPE);
+
+    }
 }

@@ -38,9 +38,14 @@ public class MappedFileQueue {
     private final String storePath;
 
     private final int mappedFileSize;
-
+    /**
+     *
+     */
     private final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
 
+    /**
+     * 分配MappedFile线程
+     */
     private final AllocateMappedFileService allocateMappedFileService;
 
     private long flushedWhere = 0;
@@ -191,6 +196,12 @@ public class MappedFileQueue {
         return 0;
     }
 
+    /**
+     * 获取MappedFile，如果没有则异步创建
+     * @param startOffset
+     * @param needCreate
+     * @return
+     */
     public MappedFile getLastMappedFile(final long startOffset, boolean needCreate) {
         long createOffset = -1;
         MappedFile mappedFileLast = getLastMappedFile();

@@ -80,8 +80,8 @@ public class MessageStoreConfig {
     private int fileReservedTime = 72;
     // Flow control for ConsumeQueue
     private int putMsgIndexHightWater = 600000;
-    // The maximum size of a single log file,default is 512K
-    private int maxMessageSize = 1024 * 1024 * 4;
+    // The maximum size of a single log file,default is 512K = 524288 byte = 524288*8 bit = 4194304 bit
+    private int maxMessageSize = 1024 * 1024 * 4;// = 4194304   //应该替换成 524288 byte
     // Whether check the CRC32 of the records consumed.
     // This ensures no on-the-wire or on-disk corruption to the messages occurred.
     // This check adds some overhead,so it may be disabled in cases seeking extreme performance.

@@ -226,6 +226,7 @@ public class UtilAll {
     public static int crc32(byte[] array, int offset, int length) {
         CRC32 crc32 = new CRC32();
         crc32.update(array, offset, length);
+        //long强转int的方法
         return (int) (crc32.getValue() & 0x7FFFFFFF);
     }
 

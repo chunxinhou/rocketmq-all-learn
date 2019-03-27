@@ -224,10 +224,13 @@ public class BrokerController {
     }
 
     public boolean initialize() throws CloneNotSupportedException {
+        /*加载 topic 信息*/
         boolean result = this.topicConfigManager.load();
-
+        /*加载消费位点*/
         result = result && this.consumerOffsetManager.load();
+        /*订阅组*/
         result = result && this.subscriptionGroupManager.load();
+        /*消费者过滤器加载*/
         result = result && this.consumerFilterManager.load();
 
         if (result) {
@@ -309,6 +312,7 @@ public class BrokerController {
                 Executors.newFixedThreadPool(this.brokerConfig.getConsumerManageThreadPoolNums(), new ThreadFactoryImpl(
                     "ConsumerManageThread_"));
 
+            /*注册处理器*/
             this.registerProcessor();
 
             final long initialDelay = UtilAll.computNextMorningTimeMillis() - System.currentTimeMillis();

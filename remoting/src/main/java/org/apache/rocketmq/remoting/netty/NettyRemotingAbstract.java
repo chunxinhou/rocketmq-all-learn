@@ -482,11 +482,14 @@ public abstract class NettyRemotingAbstract {
 
     public void invokeOnewayImpl(final Channel channel, final RemotingCommand request, final long timeoutMillis)
         throws InterruptedException, RemotingTooMuchRequestException, RemotingTimeoutException, RemotingSendRequestException {
-        request.markOnewayRPC();
+        request.markOnewayRPC();/*标记为oneway消息*/
+        /*获得信号量：默认com.rocketmq.remoting.clientOnewaySemaphoreValue = 65535 ，可以保护服务*/
         boolean acquired = this.semaphoreOneway.tryAcquire(timeoutMillis, TimeUnit.MILLISECONDS);
         if (acquired) {
+            /*此方法封装了信号量的cas释放方法*/
             final SemaphoreReleaseOnlyOnce once = new SemaphoreReleaseOnlyOnce(this.semaphoreOneway);
             try {
+                /*发送数据*/
                 channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture f) throws Exception {

@@ -43,6 +43,9 @@ import org.apache.rocketmq.store.PutMessageStatus;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
 
+/**
+ * 延迟消息实现
+ */
 public class ScheduleMessageService extends ConfigManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
@@ -137,10 +140,12 @@ public class ScheduleMessageService extends ConfigManager {
         return maxDelayLevel;
     }
 
+    @Override
     public String encode() {
         return this.encode(false);
     }
 
+    @Override
     public boolean load() {
         boolean result = super.load();
         result = result && this.parseDelayLevel();
@@ -171,7 +176,7 @@ public class ScheduleMessageService extends ConfigManager {
     }
 
     public boolean parseDelayLevel() {
-        HashMap<String, Long> timeUnitTable = new HashMap<String, Long>();
+        HashMap<String, Long> timeUnitTable = new HashMap<String, Long>(4);
         timeUnitTable.put("s", 1000L);
         timeUnitTable.put("m", 1000L * 60);
         timeUnitTable.put("h", 1000L * 60 * 60);

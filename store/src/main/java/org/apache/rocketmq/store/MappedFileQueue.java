@@ -210,6 +210,7 @@ public class MappedFileQueue {
         long createOffset = -1;
         MappedFile mappedFileLast = getLastMappedFile();
 
+        //因为一些莫名其妙的可能，导致mappedFileLast == null, 下面的逻辑则是为了确保物理偏移量和逻辑偏移量仍然保持一致
         if (mappedFileLast == null) {
             createOffset = startOffset - (startOffset % this.mappedFileSize);
         }

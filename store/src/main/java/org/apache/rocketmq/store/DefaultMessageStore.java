@@ -314,6 +314,7 @@ public class DefaultMessageStore implements MessageStore {
         }
     }
 
+    @Override
     public PutMessageResult putMessage(MessageExtBrokerInner msg) {
         //检查是否关闭
         if (this.shutdown) {

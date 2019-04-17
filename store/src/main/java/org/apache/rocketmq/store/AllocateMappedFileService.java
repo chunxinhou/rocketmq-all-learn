@@ -51,23 +51,33 @@ public class AllocateMappedFileService extends ServiceThread {
     public MappedFile putRequestAndReturnMappedFile(String nextFilePath, String nextNextFilePath, int fileSize) {
         int canSubmitRequests = 2;
 
+        //是否支持堆外池
         if (this.messageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
             if (this.messageStore.getMessageStoreConfig().isFastFailIfNoBufferInStorePool()
                 && BrokerRole.SLAVE != this.messageStore.getMessageStoreConfig().getBrokerRole()) { //if broker is slave, don't fast fail even no buffer in pool
+                //重新计算 可以提交的创建文件“请求”
+                //因为一个文件要和一个堆外内存关联，当这个文件isFull的时候才会重新返回到pool中
+                //这里就会有一种情况，并发太高，堆外缓存池 设置数目太少，
+                // 导致提交的创建请求多于可以分配的资源，导致后续不能正常存储消息
                 canSubmitRequests = this.messageStore.getTransientStorePool().remainBufferNumbs() - this.requestQueue.size();
             }
         }
 
+        //构建下一个创建文件“请求”
         AllocateRequest nextReq = new AllocateRequest(nextFilePath, fileSize);
+        //将要创建的请求 内部缓存
         boolean nextPutOK = this.requestTable.putIfAbsent(nextFilePath, nextReq) == null;
 
         if (nextPutOK) {
-            if (canSubmitRequests <= 0) {
+            if (canSubmitRequests <= 0) { //只有在支持堆外内存池的master 才会存在 <2 的情况
                 log.warn("[NOTIFYME]TransientStorePool is not enough, so create mapped file error, " +
                     "RequestQueueSize : {}, StorePoolSize: {}", this.requestQueue.size(), this.messageStore.getTransientStorePool().remainBufferNumbs());
+                //移除
                 this.requestTable.remove(nextFilePath);
                 return null;
             }
+
+            //存入 优先级队列中，异步创建
             boolean offerOK = this.requestQueue.offer(nextReq);
             if (!offerOK) {
                 log.warn("never expected here, add a request to preallocate queue failed");
@@ -75,6 +85,7 @@ public class AllocateMappedFileService extends ServiceThread {
             canSubmitRequests--;
         }
 
+        //构建下下一个文件“请求”
         AllocateRequest nextNextReq = new AllocateRequest(nextNextFilePath, fileSize);
         boolean nextNextPutOK = this.requestTable.putIfAbsent(nextNextFilePath, nextNextReq) == null;
         if (nextNextPutOK) {
@@ -95,6 +106,7 @@ public class AllocateMappedFileService extends ServiceThread {
             return null;
         }
 
+        //从内部缓存中获取第一个文件，并阻塞等待直到创建成功或5s超时
         AllocateRequest result = this.requestTable.get(nextFilePath);
         try {
             if (result != null) {
@@ -140,6 +152,9 @@ public class AllocateMappedFileService extends ServiceThread {
         }
     }
 
+    /**
+     * 创建文件线程run
+     */
     public void run() {
         log.info(this.getServiceName() + " service started");
 
@@ -151,12 +166,14 @@ public class AllocateMappedFileService extends ServiceThread {
 
     /**
      * Only interrupted by the external thread, will return false
+     * 创建文件 核心
      */
     private boolean mmapOperation() {
         boolean isSuccess = false;
         AllocateRequest req = null;
         try {
             req = this.requestQueue.take();
+            //再次校验，防并发
             AllocateRequest expectedRequest = this.requestTable.get(req.getFilePath());
             if (null == expectedRequest) {
                 log.warn("this mmap request expired, maybe cause timeout " + req.getFilePath() + " "
@@ -173,9 +190,10 @@ public class AllocateMappedFileService extends ServiceThread {
                 long beginTime = System.currentTimeMillis();
 
                 MappedFile mappedFile;
-                //是否带有暂存池功能
+                //是否带有堆外缓存池（暂存池）功能
                 if (messageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
                     try {
+                        //为啥要用这种方式加载？？？？？
                         mappedFile = ServiceLoader.load(MappedFile.class).iterator().next();
                         mappedFile.init(req.getFilePath(), req.getFileSize(), messageStore.getTransientStorePool());
                     } catch (RuntimeException e) {

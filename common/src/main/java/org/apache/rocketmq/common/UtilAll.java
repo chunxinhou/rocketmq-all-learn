@@ -80,9 +80,9 @@ public class UtilAll {
 
     public static String offset2FileName(final long offset) {
         final NumberFormat nf = NumberFormat.getInstance();
-        nf.setMinimumIntegerDigits(20);
-        nf.setMaximumFractionDigits(0);
-        nf.setGroupingUsed(false);
+        nf.setMinimumIntegerDigits(20); //整数设置20位
+        nf.setMaximumFractionDigits(0); //小数设置0位
+        nf.setGroupingUsed(false); //是否分组 1,222,222
         return nf.format(offset);
     }
 

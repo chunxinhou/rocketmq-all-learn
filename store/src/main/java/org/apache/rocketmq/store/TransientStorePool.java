@@ -48,10 +48,12 @@ public class TransientStorePool {
      */
     public void init() {
         for (int i = 0; i < poolSize; i++) {
+            //开辟一个直接内存，也就是堆外内存
             ByteBuffer byteBuffer = ByteBuffer.allocateDirect(fileSize);
 
             final long address = ((DirectBuffer) byteBuffer).address();
             Pointer pointer = new Pointer(address);
+            //锁住内存是为了防止这段内存被操作系统swap掉
             LibC.INSTANCE.mlock(pointer, new NativeLong(fileSize));
 
             availableBuffers.offer(byteBuffer);
@@ -62,6 +64,7 @@ public class TransientStorePool {
         for (ByteBuffer byteBuffer : availableBuffers) {
             final long address = ((DirectBuffer) byteBuffer).address();
             Pointer pointer = new Pointer(address);
+            //解锁
             LibC.INSTANCE.munlock(pointer, new NativeLong(fileSize));
         }
     }
@@ -69,10 +72,13 @@ public class TransientStorePool {
     public void returnBuffer(ByteBuffer byteBuffer) {
         byteBuffer.position(0);
         byteBuffer.limit(fileSize);
+
+        //为啥很特殊的插到第一个？？？？？？
         this.availableBuffers.offerFirst(byteBuffer);
     }
 
     public ByteBuffer borrowBuffer() {
+        //弹出第一个
         ByteBuffer buffer = availableBuffers.pollFirst();
         if (availableBuffers.size() < poolSize * 0.4) {
             log.warn("TransientStorePool only remain {} sheets.", availableBuffers.size());

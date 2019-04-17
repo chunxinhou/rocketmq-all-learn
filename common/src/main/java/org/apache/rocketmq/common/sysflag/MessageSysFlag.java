@@ -17,7 +17,7 @@
 package org.apache.rocketmq.common.sysflag;
 
 public class MessageSysFlag {
-    //0000 0001
+    //0000 0001  8 bit = 1 byte （字节）
     public final static int COMPRESSED_FLAG = 0x1;
     //0000 0010
     public final static int MULTI_TAGS_FLAG = 0x1 << 1;

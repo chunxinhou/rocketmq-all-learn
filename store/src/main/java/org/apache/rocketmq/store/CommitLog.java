@@ -536,8 +536,7 @@ public class CommitLog {
     public PutMessageResult putMessage(final MessageExtBrokerInner msg) {
         // Set the storage time
         msg.setStoreTimestamp(System.currentTimeMillis());
-        // Set the message body BODY CRC (consider the most appropriate setting
-        // on the client)
+        //crc 防止篡改消息
         msg.setBodyCRC(UtilAll.crc32(msg.getBody()));
         // Back to Results
         AppendMessageResult result = null;
@@ -546,7 +545,7 @@ public class CommitLog {
 
         String topic = msg.getTopic();
         int queueId = msg.getQueueId();
-
+        //判断是否是事务消息
         final int tranType = MessageSysFlag.getTransactionValue(msg.getSysFlag());
         if (tranType == MessageSysFlag.TRANSACTION_NOT_TYPE
             || tranType == MessageSysFlag.TRANSACTION_COMMIT_TYPE) {
@@ -573,7 +572,7 @@ public class CommitLog {
         MappedFile unlockMappedFile = null;
         //获取映射文件
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
-
+        //两种锁供选择， 默认 PutMessageSpinLock  可选 ReentrantLock 非公平可重入锁
         putMessageLock.lock(); //spin or ReentrantLock ,depending on store config
         try {
             long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();

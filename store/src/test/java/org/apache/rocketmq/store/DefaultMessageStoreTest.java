@@ -97,18 +97,18 @@ public class DefaultMessageStoreTest {
 
     private MessageStore buildMessageStore() throws Exception {
         MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
-        messageStoreConfig.setMapedFileSizeCommitLog(1024 * 1024 * 10);
-        messageStoreConfig.setMapedFileSizeConsumeQueue(1024 * 1024 * 10);
+        messageStoreConfig.setMapedFileSizeCommitLog(1024 * 10); //10 kb
+        messageStoreConfig.setMapedFileSizeConsumeQueue(1024 * 10);//10 kb
         messageStoreConfig.setMaxHashSlotNum(10000);
         messageStoreConfig.setMaxIndexNum(100 * 100);
-        messageStoreConfig.setFlushDiskType(FlushDiskType.SYNC_FLUSH);
+        messageStoreConfig.setFlushDiskType(FlushDiskType.ASYNC_FLUSH);
         messageStoreConfig.setFlushIntervalConsumeQueue(1);
         return new DefaultMessageStore(messageStoreConfig, new BrokerStatsManager("simpleTest"), new MyMessageArrivingListener(), new BrokerConfig());
     }
 
     @Test
     public void testWriteAndRead() {
-        long totalMsgs = 10;
+        long totalMsgs = 100;
         QUEUE_TOTAL = 1;
         MessageBody = StoreMessage.getBytes();
         for (long i = 0; i < totalMsgs; i++) {
@@ -125,7 +125,7 @@ public class DefaultMessageStoreTest {
 
     private MessageExtBrokerInner buildMessage() {
         MessageExtBrokerInner msg = new MessageExtBrokerInner();
-        msg.setTopic("FooBar");
+        msg.setTopic("TOPIC_A");
         msg.setTags("TAG1");
         msg.setKeys("Hello");
         msg.setBody(MessageBody);

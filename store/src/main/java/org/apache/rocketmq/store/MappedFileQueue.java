@@ -39,7 +39,7 @@ public class MappedFileQueue {
 
     private final int mappedFileSize;
     /**
-     *
+     * 并发安全的集合，“读写分离？？”
      */
     private final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
 
@@ -198,29 +198,34 @@ public class MappedFileQueue {
 
     /**
      * 获取MappedFile，如果没有则异步创建
-     * @param startOffset
+     * @param startOffset  逻辑偏移量
      * @param needCreate
      * @return
      */
     public MappedFile getLastMappedFile(final long startOffset, boolean needCreate) {
         long createOffset = -1;
+
+        //(1):
         MappedFile mappedFileLast = getLastMappedFile();
 
+        //(2):
         if (mappedFileLast == null) {
             createOffset = startOffset - (startOffset % this.mappedFileSize);
         }
 
+        //(3):
         if (mappedFileLast != null && mappedFileLast.isFull()) {
             createOffset = mappedFileLast.getFileFromOffset() + this.mappedFileSize;
         }
 
         if (createOffset != -1 && needCreate) {
+            //创建两个文件
             String nextFilePath = this.storePath + File.separator + UtilAll.offset2FileName(createOffset);
-            String nextNextFilePath = this.storePath + File.separator
-                + UtilAll.offset2FileName(createOffset + this.mappedFileSize);
+            String nextNextFilePath = this.storePath + File.separator + UtilAll.offset2FileName(createOffset + this.mappedFileSize);
             MappedFile mappedFile = null;
 
             if (this.allocateMappedFileService != null) {
+                //创建存储文件
                 mappedFile = this.allocateMappedFileService.putRequestAndReturnMappedFile(nextFilePath,
                     nextNextFilePath, this.mappedFileSize);
             } else {
@@ -251,16 +256,16 @@ public class MappedFileQueue {
     public MappedFile getLastMappedFile() {
         MappedFile mappedFileLast = null;
 
-        while (!this.mappedFiles.isEmpty()) {
-            try {
-                mappedFileLast = this.mappedFiles.get(this.mappedFiles.size() - 1);
-                break;
-            } catch (IndexOutOfBoundsException e) {
-                //continue;
-            } catch (Exception e) {
-                log.error("getLastMappedFile has exception.", e);
-                break;
-            }
+            while (!this.mappedFiles.isEmpty()) {
+                try {
+                    mappedFileLast = this.mappedFiles.get(this.mappedFiles.size() - 1);
+                    break;
+                } catch (IndexOutOfBoundsException e) {
+                    //continue;
+                } catch (Exception e) {
+                    log.error("getLastMappedFile has exception.", e);
+                    break;
+                }
         }
 
         return mappedFileLast;

@@ -43,8 +43,10 @@ import org.apache.rocketmq.common.sysflag.TopicSysFlag;
 public class TopicConfigManager extends ConfigManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private static final long LOCK_TIMEOUT_MILLIS = 3000;
+    //
     private transient final Lock lockTopicConfigTable = new ReentrantLock();
 
+    //topic 缓存 ，key：name ，value：配置信息
     private final ConcurrentMap<String, TopicConfig> topicConfigTable =
         new ConcurrentHashMap<String, TopicConfig>(1024);
     private final DataVersion dataVersion = new DataVersion();
@@ -148,15 +150,18 @@ public class TopicConfigManager extends ConfigManager {
         boolean createNew = false;
 
         try {
+            //加锁 ReentrantLock
             if (this.lockTopicConfigTable.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     topicConfig = this.topicConfigTable.get(topic);
                     if (topicConfig != null)
                         return topicConfig;
 
+                    //获取默认topic配置
                     TopicConfig defaultTopicConfig = this.topicConfigTable.get(defaultTopic);
                     if (defaultTopicConfig != null) {
                         if (defaultTopic.equals(MixAll.AUTO_CREATE_TOPIC_KEY_TOPIC)) {
+                            //
                             if (!this.brokerController.getBrokerConfig().isAutoCreateTopicEnable()) {
                                 defaultTopicConfig.setPerm(PermName.PERM_READ | PermName.PERM_WRITE);
                             }
@@ -198,7 +203,7 @@ public class TopicConfigManager extends ConfigManager {
                         this.dataVersion.nextVersion();
 
                         createNew = true;
-
+                        //持久化
                         this.persist();
                     }
                 } finally {
@@ -209,6 +214,7 @@ public class TopicConfigManager extends ConfigManager {
             log.error("createTopicInSendMessageMethod exception", e);
         }
 
+        //如果新建topic成功，就将强制更新nameserver上的broker路由信息和slave
         if (createNew) {
             this.brokerController.registerBrokerAll(false, true,true);
         }

@@ -60,6 +60,10 @@ public class MappedFileQueue {
         this.allocateMappedFileService = allocateMappedFileService;
     }
 
+    /**
+     * 确保相邻文件初始偏移量（文件名称）的差和文件的大小保持一致
+     * 即物理偏移量与逻辑偏移量保持一致
+     */
     public void checkSelf() {
 
         if (!this.mappedFiles.isEmpty()) {
@@ -209,6 +213,7 @@ public class MappedFileQueue {
         MappedFile mappedFileLast = getLastMappedFile();
 
         //(2):
+        //因为一些莫名其妙的可能，导致mappedFileLast == null, 下面的逻辑则是为了确保物理偏移量和逻辑偏移量仍然保持一致
         if (mappedFileLast == null) {
             createOffset = startOffset - (startOffset % this.mappedFileSize);
         }
@@ -500,6 +505,7 @@ public class MappedFileQueue {
                         return targetFile;
                     }
 
+                    //
                     for (MappedFile tmpMappedFile : this.mappedFiles) {
                         if (offset >= tmpMappedFile.getFileFromOffset()
                             && offset < tmpMappedFile.getFileFromOffset() + this.mappedFileSize) {

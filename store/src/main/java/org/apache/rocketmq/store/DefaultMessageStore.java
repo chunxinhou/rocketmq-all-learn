@@ -129,6 +129,7 @@ public class DefaultMessageStore implements MessageStore {
         this.indexService = new IndexService(this);
         this.haService = new HAService(this);
 
+        //调度服务
         this.reputMessageService = new ReputMessageService();
 
         this.scheduleMessageService = new ScheduleMessageService(this);
@@ -143,6 +144,7 @@ public class DefaultMessageStore implements MessageStore {
 
         this.indexService.start();
 
+        //初始化 consumerQueue调度和builderindex调度
         this.dispatcherList = new LinkedList<>();
         this.dispatcherList.addLast(new CommitLogDispatcherBuildConsumeQueue());
         this.dispatcherList.addLast(new CommitLogDispatcherBuildIndex());
@@ -219,6 +221,9 @@ public class DefaultMessageStore implements MessageStore {
         lockFile.getChannel().write(ByteBuffer.wrap("lock".getBytes()));
         lockFile.getChannel().force(true);
 
+        /**
+         *刷盘持久化
+         */
         this.flushConsumeQueueService.start();
         this.commitLog.start();
         this.storeStatsService.start();
@@ -232,7 +237,12 @@ public class DefaultMessageStore implements MessageStore {
         } else {
             this.reputMessageService.setReputFromOffset(this.commitLog.getMaxOffset());
         }
+
+        /**
+         * 开启调度服务：消息索引进入consumeQueue  pageCache、构建消息索引
+         */
         this.reputMessageService.start();
+
 
         this.haService.start();
 
@@ -304,6 +314,7 @@ public class DefaultMessageStore implements MessageStore {
         }
     }
 
+    @Override
     public PutMessageResult putMessage(MessageExtBrokerInner msg) {
         //检查是否关闭
         if (this.shutdown) {
@@ -1176,8 +1187,15 @@ public class DefaultMessageStore implements MessageStore {
         log.info(fileName + (result ? " create OK" : " already exists"));
     }
 
+
+    /**
+     * 开启线程定时任务
+     */
     private void addScheduleTask() {
 
+        /**
+         * 1、定时删除commitlog和consumeQueue
+         */
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -1185,6 +1203,9 @@ public class DefaultMessageStore implements MessageStore {
             }
         }, 1000 * 60, this.messageStoreConfig.getCleanResourceInterval(), TimeUnit.MILLISECONDS);
 
+        /**
+         * 2、定时检查物理偏移量与逻辑偏移量一致
+         */
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -1192,6 +1213,9 @@ public class DefaultMessageStore implements MessageStore {
             }
         }, 1, 10, TimeUnit.MINUTES);
 
+        /**
+         * 锁异常检测：debug
+         */
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -1227,6 +1251,7 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     private void checkSelf() {
+        //commitlog 格式检查
         this.commitLog.checkSelf();
 
         Iterator<Entry<String, ConcurrentMap<Integer, ConsumeQueue>>> it = this.consumeQueueTable.entrySet().iterator();
@@ -1421,6 +1446,10 @@ public class DefaultMessageStore implements MessageStore {
             }
         }, 6, TimeUnit.SECONDS);
     }
+
+    /**
+     * commitlog 消息调度：将消息索引异步分发到不同的ConsumerQueue 中
+     */
 
     class CommitLogDispatcherBuildConsumeQueue implements CommitLogDispatcher {
 
@@ -1649,6 +1678,7 @@ public class DefaultMessageStore implements MessageStore {
         }
     }
 
+
     class FlushConsumeQueueService extends ServiceThread {
         private static final int RETRY_TIMES_OVER = 3;
         private long lastFlushTimestamp = 0;
@@ -1829,7 +1859,7 @@ public class DefaultMessageStore implements MessageStore {
 
             while (!this.isStopped()) {
                 try {
-                    Thread.sleep(1);
+                    Thread.sleep(1);//防止并行变串行
                     this.doReput();
                 } catch (Exception e) {
                     DefaultMessageStore.log.warn(this.getServiceName() + " service has exception. ", e);

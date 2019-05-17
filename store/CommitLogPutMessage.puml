@@ -1,0 +1,19 @@
+@startuml
+DefaultMessageStore -> CommitLog: putMessage()
+CommitLog -> MappedFileQueue: getLastMappedFile()
+CommitLog <- MappedFileQueue: return mappedFile
+CommitLog -> PutMessageLock:lock()
+CommitLog --> CommitLog: mappedFile==null或者mappedFile.isFull()跳①
+
+CommitLog -> MappedFileQueue: ① 创建两个文件，咋创建？为什么这样创建？
+CommitLog <- MappedFileQueue: return mappedFile
+CommitLog -> MappedFile: appendMessagesInner() 追加消息
+
+
+
+
+CommitLog --> Alice: Authentication Response
+
+
+
+@enduml

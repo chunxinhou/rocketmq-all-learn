@@ -235,6 +235,7 @@ public class BrokerController {
 
         if (result) {
             try {
+                /*创建消息存储类*/
                 this.messageStore =
                     new DefaultMessageStore(this.messageStoreConfig, this.brokerStatsManager, this.messageArrivingListener,
                         this.brokerConfig);

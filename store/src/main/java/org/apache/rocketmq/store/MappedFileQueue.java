@@ -39,7 +39,7 @@ public class MappedFileQueue {
 
     private final int mappedFileSize;
     /**
-     * 并发安全的集合，“读写分离？？”
+     * 并发安全的集合
      */
     private final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
 

@@ -60,6 +60,44 @@ public class DefaultMessageStoreTest {
         assertTrue(load);
         messageStore.start();
     }
+    private MessageStore buildMessageStore() throws Exception {
+        MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
+        messageStoreConfig.setMapedFileSizeCommitLog(1024 * 10); //10 kb
+        messageStoreConfig.setMapedFileSizeConsumeQueue(1024 * 10);//10 kb
+        messageStoreConfig.setMaxHashSlotNum(10000);
+        messageStoreConfig.setMaxIndexNum(100 * 100);
+        messageStoreConfig.setFlushDiskType(FlushDiskType.ASYNC_FLUSH);
+        messageStoreConfig.setFlushIntervalConsumeQueue(1);
+        return new DefaultMessageStore(messageStoreConfig, new BrokerStatsManager("simpleTest"), new MyMessageArrivingListener(), new BrokerConfig());
+    }
+
+    //@After
+    public void destory() {
+        messageStore.shutdown();
+        messageStore.destroy();
+
+        MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
+        File file = new File(messageStoreConfig.getStorePathRootDir());
+        UtilAll.deleteFile(file);
+    }
+
+
+    @Test
+    public void testWriteAndRead() {
+        long totalMsgs = 100;
+        QUEUE_TOTAL = 1;
+        MessageBody = StoreMessage.getBytes();
+        for (long i = 0; i < totalMsgs; i++) {
+            messageStore.putMessage(buildMessage());
+        }
+
+        for (long i = 0; i < totalMsgs; i++) {
+            GetMessageResult result = messageStore.getMessage("GROUP_A", "FooBar", 0, i, 1024 * 1024, null);
+            assertThat(result).isNotNull();
+            result.release();
+        }
+        verifyThatMasterIsFunctional(totalMsgs, messageStore);
+    }
 
     @Test(expected = OverlappingFileLockException.class)
     public void test_repate_restart() throws Exception {
@@ -85,43 +123,11 @@ public class DefaultMessageStoreTest {
         }
     }
 
-    @After
-    public void destory() {
-        messageStore.shutdown();
-        messageStore.destroy();
 
-        MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
-        File file = new File(messageStoreConfig.getStorePathRootDir());
-        UtilAll.deleteFile(file);
-    }
 
-    private MessageStore buildMessageStore() throws Exception {
-        MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
-        messageStoreConfig.setMapedFileSizeCommitLog(1024 * 10); //10 kb
-        messageStoreConfig.setMapedFileSizeConsumeQueue(1024 * 10);//10 kb
-        messageStoreConfig.setMaxHashSlotNum(10000);
-        messageStoreConfig.setMaxIndexNum(100 * 100);
-        messageStoreConfig.setFlushDiskType(FlushDiskType.ASYNC_FLUSH);
-        messageStoreConfig.setFlushIntervalConsumeQueue(1);
-        return new DefaultMessageStore(messageStoreConfig, new BrokerStatsManager("simpleTest"), new MyMessageArrivingListener(), new BrokerConfig());
-    }
 
-    @Test
-    public void testWriteAndRead() {
-        long totalMsgs = 100;
-        QUEUE_TOTAL = 1;
-        MessageBody = StoreMessage.getBytes();
-        for (long i = 0; i < totalMsgs; i++) {
-            messageStore.putMessage(buildMessage());
-        }
 
-        for (long i = 0; i < totalMsgs; i++) {
-            GetMessageResult result = messageStore.getMessage("GROUP_A", "FooBar", 0, i, 1024 * 1024, null);
-            assertThat(result).isNotNull();
-            result.release();
-        }
-        verifyThatMasterIsFunctional(totalMsgs, messageStore);
-    }
+
 
     private MessageExtBrokerInner buildMessage() {
         MessageExtBrokerInner msg = new MessageExtBrokerInner();
